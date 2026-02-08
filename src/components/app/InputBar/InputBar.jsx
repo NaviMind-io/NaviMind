@@ -3,26 +3,13 @@
 import { useContext, useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { UIContext } from "@/context/UIContext";
-import {
-  createChatGlobal,
-  addMessageToGlobalChat,
-  createChatForTopic,
-  addMessageToTopicChat,
-  updateGlobalChatMessage,
-  updateTopicChatMessage,
-} from "@/firebase/chatStore";
-import { db } from "@/firebase/config";
+
 import { auth } from "@/firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
 import { ChatContext } from "@/context/ChatContext";
-import { doc, getDoc } from "firebase/firestore";
 import Tooltip from "@/components/common/Tooltip";
 import FilePreview from "./FilePreview";
-import {
-  shouldUpdateSummary,
-  generateChatSummary,
-} from "@/ai/chatSummary";
-
+import { sendChatMessage } from "./sendChatMessage";
 
 const FILES_LIMIT = 5;
 
@@ -34,13 +21,9 @@ const topicIdFromURL =
     ? pathname.split("/app/projects/")[1]?.split("/")[0] || null
     : null;
 
-
   const {
-    sendMessage,
     projectChatSessions,
-    activeProject,
     activeChatId,
-    addCustomProject,
     setProjectChatSessions,
     setActiveProject,
     setActiveChatId,
@@ -101,283 +84,24 @@ const topicIdFromURL =
   }, []);
 
   /* ───────── HANDLERS ───────── */
- const handleSend = async () => {
+  const handleSend = async () => {
   if (!inputValue.trim()) return;
   if (!currentUser?.uid) return;
 
-  const topicId = topicIdFromURL && topicIdFromURL !== "null" ? topicIdFromURL : null;
-  const inTopic = Boolean(topicId);
-  let chatId = activeChatId;
+  const message = inputValue;
+  setInputValue("");
+  setIsActive(false);
 
-  try {
-    const message = inputValue;
-    setInputValue(""); 
-    setIsActive(false);
-
-    if (!chatId) {
-      if (inTopic) {
-        const created = await createChatForTopic({
-          uid: currentUser?.uid,
-          topicId,
-          messageText: message,
-        });
-
-        chatId = created.chatId;
-        setActiveProject(topicId);
-        setActiveChatId(chatId);
-
-        const docRef = doc(
-          db,
-          "users",
-          currentUser.uid,
-          "topics",
-          topicId,
-          "chats",
-          chatId
-        );
-        const snap = await getDoc(docRef);
-        const data = snap.exists() ? snap.data() : null;
-
-        const newChatObj = {
-          chatId,
-          createdAt: data?.createdAt?.toMillis?.() ?? Date.now(),
-          messages: [{ role: "user", content: message }],
-          title: message.slice(0, 30),
-        };
-
-        setProjectChatSessions((prev) => {
-          const updated = { ...prev };
-          const arr = updated[topicId] || [];
-          updated[topicId] = [newChatObj, ...arr.filter(x => x.chatId !== chatId)];
-          return updated;
-        });
-      } else {
-        const created = await createChatGlobal({
-          uid: currentUser?.uid,
-          messageText: message,
-        });
-
-        chatId = created.chatId;
-        setActiveProject(null);
-        setActiveChatId(chatId);
-
-        const docRef = doc(db, "users", currentUser.uid, "chats", chatId);
-        const snap = await getDoc(docRef);
-        const data = snap.exists() ? snap.data() : null;
-
-        const newChatObj = {
-          chatId,
-          createdAt: data?.createdAt?.toMillis?.() ?? Date.now(),
-          messages: [{ role: "user", content: message }],
-          title: message.slice(0, 30),
-        };
-
-        setProjectChatSessions((prev) => {
-          const updated = { ...prev };
-          const arr = updated.global || [];
-          updated.global = [newChatObj, ...arr.filter(x => x.chatId !== chatId)];
-          return updated;
-        });
-      }
-    }
-
-    if (inTopic) {
-      await addMessageToTopicChat(topicId, chatId, message);
-    } else {
-      await addMessageToGlobalChat(chatId, message);
-    }
-
-    // 🧠 SUMMARY (MVP, safe)
-try {
-  const chatSessionKey = inTopic ? topicId : "global";
-  const chatSessions = projectChatSessions?.[chatSessionKey] || [];
-  const currentChat = chatSessions.find(c => c.chatId === chatId);
-
-  const messageCount = currentChat?.messages?.length || 0;
-
-  if (shouldUpdateSummary(messageCount)) {
-    const summary = await generateChatSummary(
-      currentChat?.messages || []
-    );
-
-    if (summary) {
-      await updateChatSummary({
-        uid: currentUser.uid,
-        chatId,
-        topicId: inTopic ? topicId : null,
-        summaryText: summary,
-      });
-    }
-  }
-} catch (e) {
-  console.warn("Summary skipped (safe):", e);
-}
-
-    // ✅ создаём placeholder-сообщение ассистента и запоминаем его id
-let aiMessageId = null;
-
-try {
-  if (inTopic) {
-    const created = await addMessageToTopicChat(
-      topicId,
-      chatId,
-      "NaviMind syncing…",
-      "assistant"
-    );
-    aiMessageId = created?.messageId || null;
-  } else {
-    const created = await addMessageToGlobalChat(
-      chatId,
-      "NaviMind syncing…",
-      "assistant"
-    );
-    aiMessageId = created?.messageId || null;
-  }
-} catch (e) {
-  console.error("Failed to create AI placeholder:", e);
-}
-
-// 🧠 Resolve current chat safely
-const chatSessionKey = inTopic ? topicId : "global";
-const chatSessions = projectChatSessions?.[chatSessionKey] || [];
-const currentChat = chatSessions.find(c => c.chatId === chatId);
-
-// 🧠 Build safe chat history for AI
-const rawMessages = Array.isArray(currentChat?.messages)
-  ? currentChat.messages
-      .filter(
-        m =>
-          (m.role === "user" || m.role === "assistant") &&
-          m.content &&
-          !m.content.startsWith("NaviMind syncing")
-      )
-      .map(m => ({
-        role: m.role,
-        content: m.content,
-      }))
-  : [];
-
-const chatHistory = [...rawMessages, { role: "user", content: message }]
-  .slice(-10);
-
-// 🤖 GET AI RESPONSE (SSE if available, JSON fallback)
-try {
-  const res = await fetch("/api/rag", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Accept": "text/event-stream",
-    },
-    body: JSON.stringify({
-  question: message,
-  chatHistory,
-}),
+  await sendChatMessage({
+    message,
+    currentUser,
+    activeChatId,
+    topicIdFromURL,
+    projectChatSessions,
+    setProjectChatSessions,
+    setActiveProject,
+    setActiveChatId,
   });
-
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
-  }
-
-  const contentType = res.headers.get("content-type") || "";
-
-  // ---------- 1) SSE STREAM ----------
-  if (res.body && (contentType.includes("text/event-stream") || contentType.includes("text/plain"))) {
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-
-    let buffer = "";
-    let finalText = "";
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-
-      // SSE events separated by blank line
-      const parts = buffer.split("\n\n");
-      buffer = parts.pop() || "";
-
-      for (const chunk of parts) {
-        const lines = chunk.split("\n");
-
-        let event = "";
-        let data = "";
-
-       for (const line of lines) {
-  if (line.startsWith("event:")) event = line.slice(6).trim();
-
-  if (line.startsWith("data:")) {
-    // НЕ используем trim() — иначе токены " be", " must" теряют пробел и текст склеивается
-    let part = line.slice(5);
-
-    // по SSE часто после "data:" стоит один пробел — убираем только его
-    if (part.startsWith(" ")) part = part.slice(1);
-
-    data += (data ? "\n" : "") + part;
-  }
-}
-
-        if (event === "token") {
-          const token = data.replace(/\\n/g, "\n");
-          finalText += token;
-        }
-
-        if (event === "error") {
-          throw new Error(data || "OpenAI stream error");
-        }
-      }
-    }
-
-    // финальный апдейт в Firestore один раз
-    if (aiMessageId) {
-      const payload = { content: finalText || " " };
-      if (inTopic) {
-        await updateTopicChatMessage(topicId, chatId, aiMessageId, payload);
-      } else {
-        await updateGlobalChatMessage(chatId, aiMessageId, payload);
-      }
-    }
-  }
-
-  // ---------- 2) JSON FALLBACK ----------
-  else {
-    const data = await res.json();
-
-    if (data?.answer && aiMessageId) {
-      const payload = { content: data.answer };
-      if (inTopic) {
-        await updateTopicChatMessage(topicId, chatId, aiMessageId, payload);
-      } else {
-        await updateGlobalChatMessage(chatId, aiMessageId, payload);
-      }
-    }
-  }
-} catch (aiError) {
-  console.error("AI response error:", aiError);
-
-  if (aiMessageId) {
-    const errText = "NaviMind: error getting response.";
-    try {
-      const payload = { content: errText };
-      if (inTopic) {
-        await updateTopicChatMessage(topicId, chatId, aiMessageId, payload);
-      } else {
-        await updateGlobalChatMessage(chatId, aiMessageId, payload);
-      }
-    } catch (e) {
-      console.error("Failed to update AI placeholder:", e);
-    }
-  }
-}
-
-  } catch (err) {
-    console.error("[InputBar.handleSend] error:", {
-      message: err?.message || String(err),
-      topicId,
-      chatId,
-    });
-  }
 };
 
   const handleKeyDown = (e) => {

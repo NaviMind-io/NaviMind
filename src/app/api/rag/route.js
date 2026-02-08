@@ -9,35 +9,28 @@ import { documentAnalysisGuidance } from "@/ai/documentAnalysisGuidance";
 import { imageAnalysisGuide } from "@/ai/imageAnalysisGuide";
 import { regulatoryEvidenceGuidance } from "@/ai/regulatoryEvidenceGuidance";
 import { assistantRoleAndValue } from "@/ai/assistantRoleAndValue";
+import { operationalReasoningPolicy } from "@/ai/operationalReasoningPolicy";
 
-async function generateChatSummary({ messages }) {
-  if (!messages || messages.length === 0) return "";
+function isOperationalScenario(question) {
+  if (!question) return false;
 
-  const prompt = `
-Summarize the following conversation in 3–4 short sentences.
-Focus on the main topic, goals, and important decisions.
-Do NOT include greetings or small talk.
+  const q = question.toLowerCase();
 
-Conversation:
-${messages
-  .map(m => `${m.role.toUpperCase()}: ${m.content}`)
-  .join("\n")}
-`;
-
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: [
-        { role: "system", content: "You summarize conversations clearly and concisely." },
-        { role: "user", content: prompt },
-      ],
-    });
-
-    return completion.choices?.[0]?.message?.content || "";
-  } catch (err) {
-    console.error("❌ Failed to generate summary:", err);
-    return "";
-  }
+  return (
+    q.includes("can we") ||
+    q.includes("should we") ||
+    q.includes("continue") ||
+    q.includes("stop") ||
+    q.includes("suspend") ||
+    q.includes("operation") ||
+    q.includes("cargo") ||
+    q.includes("ballast") ||
+    q.includes("bunkering") ||
+    q.includes("terminal") ||
+    q.includes("pressure") ||
+    q.includes("limit") ||
+    q.includes("risk")
+  );
 }
 
 export const runtime = "nodejs";
@@ -103,8 +96,12 @@ export async function POST(req) {
           const summaryBlock = summary
   ? {
       role: "system",
-      content: `Conversation summary (context from earlier messages):\n${summary}`,
-    }
+      content: `
+IMPORTANT CONTEXT FROM EARLIER IN THIS CHAT.
+This information MUST be considered when answering the user.
+${summary}
+`,
+}
   : null;
 
          const messages = [
@@ -112,6 +109,15 @@ export async function POST(req) {
     role: "system",
     content: SYSTEM_PROMPT,
   },
+
+  ...(isOperationalScenario(question)
+    ? [
+        {
+          role: "system",
+          content: operationalReasoningPolicy,
+        },
+      ]
+    : []),
 
   ...(summaryBlock ? [summaryBlock] : []),
 

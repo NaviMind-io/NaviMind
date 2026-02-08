@@ -8,29 +8,36 @@ export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    const { messages } = await req.json();
+    const { messages, previousSummary } = await req.json();
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ summary: null }), { status: 200 });
     }
 
     const prompt = `
-Extract persistent operational context from the conversation.
+You are updating a conversation memory.
 
-Return STRICT JSON with these keys:
-- context: inspection_type, vessel_type, flag, location
-- known_issues: array
-- current_focus: array
-- constraints: array
+Your task is NOT to create checklists, instructions, summaries of regulations, or recommendations.
+
+Your task is ONLY to maintain a short, stable memory of what this chat is about.
 
 Rules:
-- Use ONLY information present in the conversation
-- Do NOT invent facts
-- Be concise
-- Output JSON ONLY, no text
+- Write in plain text, NOT JSON.
+- Maximum 4–5 short sentences.
+- Focus on the overall context of the conversation, not details.
+- Capture only persistent facts (vessel type, inspection type, location, user intent).
+- Do NOT include procedural steps, checklists, or regulatory explanations.
+- Do NOT repeat assistant answers.
+- Do NOT invent new facts.
 
-Conversation:
+Previous memory:
+${previousSummary || "(empty)"}
+
+New messages:
 ${messages.map(m => `${m.role}: ${m.content}`).join("\n")}
+
+Update the memory so that it reflects what this conversation is generally about.
+If the general topic has not changed, keep the memory mostly the same.
 `;
 
     const completion = await openai.chat.completions.create({
@@ -49,12 +56,7 @@ ${messages.map(m => `${m.role}: ${m.content}`).join("\n")}
 
     const raw = completion.choices?.[0]?.message?.content || "{}";
 
-    let summary;
-    try {
-      summary = JSON.parse(raw);
-    } catch {
-      summary = null;
-    }
+    const summary = raw;
 
     return new Response(JSON.stringify({ summary }), { status: 200 });
   } catch (e) {

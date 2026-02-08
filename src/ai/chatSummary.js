@@ -1,23 +1,33 @@
 
-export function shouldUpdateSummary(messageCount, step = 6) {
-  if (!messageCount || messageCount < step) return false;
-  return messageCount % step === 0;
-}
-
-export async function generateChatSummary({ messages }) {
-  if (!Array.isArray(messages) || messages.length === 0) return null;
-
-  const res = await fetch("/api/summary", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages }),
-  });
-
-  if (!res.ok) {
-    console.warn("Summary API failed");
-    return null;
+export async function fetchChatSummary({
+  messages,
+  previousSummary = "",
+}) {
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return previousSummary;
   }
 
-  const data = await res.json();
-  return data?.summary || null;
+  try {
+    const res = await fetch("/api/summary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages,
+        previousSummary,
+      }),
+    });
+
+    if (!res.ok) {
+      console.warn("fetchChatSummary: bad response", res.status);
+      return previousSummary;
+    }
+
+    const data = await res.json();
+    return typeof data.summary === "string"
+      ? data.summary
+      : previousSummary;
+  } catch (e) {
+    console.warn("fetchChatSummary failed:", e);
+    return previousSummary;
+  }
 }

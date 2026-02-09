@@ -46,7 +46,7 @@ export default function WelcomeModalDesktop({ onClose, onShowTerms, onShowPrivac
   content: (
     <>
       <p>
-        AI helps you prepare for inspections, structure PMS tasks, and draft reports for agents or the office.
+        NaviMind helps you prepare for inspections, structure PMS tasks, and draft reports for agents or the office.
         But NaviMind goes further: it keeps every step aligned 
         with your Safety Management System (SMS), so nothing is missed.
       </p>
@@ -72,7 +72,7 @@ export default function WelcomeModalDesktop({ onClose, onShowTerms, onShowPrivac
         <p>
           When something goes wrong on board, time matters. With NaviMind,
           you can describe a machinery fault, upload a log extract, or ask about a safety drill, and receive
-          a clear AI response built on verified maritime references.
+          a clear NaviMind response built on verified maritime references.
         </p>
         <ul className="list-disc list-inside space-y-1">
           <li>Diagnose a boiler pressure drop and check recommended ISM procedures.</li>

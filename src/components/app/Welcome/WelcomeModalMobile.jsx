@@ -31,17 +31,17 @@ export default function WelcomeModalMobile({ onClose, onShowTerms, onShowPrivacy
             <FeatureItem
               icon="/welcom/solas.png"
               title="Maritime Knowledge Base"
-              text="Ask your question and get an AI answer backed by SOLAS, MARPOL, ISM and flag circulars. Straight to the point, reliable, and without digging through manuals."
+              text="Ask your question and get an NaviMind answer backed by SOLAS, MARPOL, ISM and flag circulars. Straight to the point, reliable, and without digging through manuals."
             />
             <FeatureItem
               icon="/welcom/Checklist Paper.png"
               title="Smart Ops & Compliance"
-              text="AI helps you prepare for inspections, structure PMS tasks, and draft reports for agents or the office. Everything stays aligned with your Safety Management System."
+              text="NaviMind helps you prepare for inspections, structure PMS tasks, and draft reports for agents or the office. Everything stays aligned with your Safety Management System."
             />
             <FeatureItem
               icon="/welcom/emergency siren light.png"
               title="Troubleshooting & Emergency Support"
-              text="Describe an issue or upload a file from machinery faults to safety drills and receive a clear AI response based on verified maritime references."
+              text="Describe an issue or upload a file from machinery faults to safety drills and receive a clear NaviMind response based on verified maritime references."
             />
              <FeatureItem
           icon="/welcom/envelope with a letter.png"

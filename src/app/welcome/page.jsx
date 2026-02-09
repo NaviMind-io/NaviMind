@@ -6,16 +6,34 @@ import { AnimatePresence, motion } from "framer-motion";
 import { landingQuickChecks } from "@/data/landingQuickChecks";
 import ParticleBackground from "@/components/landing/ParticleBackground";
 import Logo from "@/components/branding/Logo";
-
+import { loginWithGoogle } from "@/firebase/authClient";
 
 export default function WelcomePage() {
   const router = useRouter();
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authError, setAuthError] = useState("");
+
+    async function handleGoogle() {
+    setAuthError("");
+    try {
+      setIsSubmitting(true);
+      await loginWithGoogle();
+      router.replace("/app");
+    } catch (err) {
+      console.error("Google sign-in error:", err);
+      alert("Google sign-in failed. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   const [qIndex, setQIndex] = useState(() =>
   Math.floor(Math.random() * landingQuickChecks.length)
 );
   const [typed, setTyped] = useState("");
   const [isTyping, setIsTyping] = useState(true);
+  const [showOtherOptions, setShowOtherOptions] = useState(false);
 
   const TYPING_DURATION_MS = 4000;
   const READING_PAUSE_MS = 3000;
@@ -78,14 +96,21 @@ export default function WelcomePage() {
       </div>
 
       {/* Контент */}
-      <div className="relative z-10 flex flex-col items-center justify-between flex-1 px-6 text-center py-10 sm:py-16 md:py-20 lg:py-24">
+      <div className="
+  relative z-10
+  flex flex-col items-center justify-between flex-1
+  px-6 text-center
+  pt-10 sm:pt-16 md:pt-20 lg:pt-24
+  pb-[calc(env(safe-area-inset-bottom)+4rem)]
+">
+
   {/* Верх: логотип + слоган */}
-  <div className="flex flex-col items-center mb-10">
+  <div className="flex flex-col items-center mb-1 sm:mb-6">
   <motion.div
     initial={{ opacity: 0, scale: 0.9 }}
     animate={{ opacity: 1, scale: 1 }}
     transition={{ duration: 0.8, ease: "easeOut" }}
-    className="mb-4"
+    className="mb-2"
   >
     <Logo />
   </motion.div>
@@ -93,14 +118,15 @@ export default function WelcomePage() {
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, delay: 0.5 }}
-      className="text-[14px] sm:text-[16px] md:text-[17px] font-medium text-white/70 tracking-wide mb-6"
+      className="mt-1 text-[14px] sm:text-[14px] md:text-[16px] 
+           font-medium text-white/60 tracking-normal leading-tight"
 >
       Your AI Copilot for Maritime Operations.
     </motion.p>
   </div>
 
   {/* Низ: typewriter */}
-  <div className="min-h-[80px] flex items-center justify-center w-full welcome-typewriter">
+  <div className="in-h-[56px] sm:min-h-[80px] flex items-center justify-center w-full welcome-typewriter">
     <AnimatePresence mode="wait">
       <motion.div
         key={qIndex}
@@ -109,7 +135,7 @@ export default function WelcomePage() {
         exit={{ opacity: 0, y: -6 }}
         transition={{ duration: FADE_MS / 1000 }}
       >
-        <p className="text-[22px] sm:text-[36px] font-extrabold leading-snug px-4 text-center whitespace-normal break-words max-w-[800px] mx-auto">
+        <p className="text-[20px] sm:text-[30px] font-extrabold leading-snug px-4 text-center whitespace-normal break-words max-w-[800px] mx-auto">
   {typed}
   {isTyping && (
     <span
@@ -121,22 +147,114 @@ export default function WelcomePage() {
       </motion.div>
     </AnimatePresence>
   </div>
+  
+  {/* Auth buttons */}
+<div className="mt-6 flex flex-col items-center gap-4">
 
-        {/* Кнопка */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 1 }}
-          className="mt-10"
-        >
-          <button
+  {/* Google — всегда видна */}
+  <button
     type="button"
-    onClick={() => router.push("/landing")}
-    className="px-7 py-3 rounded-lg border border-cyan-500 text-base hover:text-white hover:bg-cyan-600 transition animate-pulse-outline pwa-button"
+    onClick={handleGoogle}
+    disabled={isSubmitting}
+    className="
+  w-[260px] sm:w-[280px]
+  flex items-center justify-center gap-5
+  py-3 px-6
+  bg-white/90 backdrop-blur-sm
+  text-gray-800
+  border border-gray-300
+  rounded-xl
+  shadow-md
+  hover:bg-white
+  transition
+  disabled:opacity-60 disabled:cursor-not-allowed
+  text-sm font-medium
+"
   >
-    Ask NaviMind
+    <img src="/google-icon.svg" alt="Google" className="w-5 h-5" />
+    Continue with Google
   </button>
-        </motion.div>
+
+  {/* Toggle */}
+  {!showOtherOptions && (
+    <button
+  type="button"
+  onClick={() => setShowOtherOptions(true)}
+  className="
+    mt-3
+    mb-6
+    text-base
+    text-white/60
+    hover:text-white
+    transition
+  "
+>
+  Other options
+</button>
+  )}
+
+  {/* Apple + Email */}
+  <AnimatePresence>
+  {showOtherOptions && (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+      className="flex flex-col items-center gap-3 mt-2"
+    >
+      {/* Apple */}
+      <button
+        type="button"
+        onClick={() => alert("Apple Sign-In coming next")}
+        className="
+          w-[260px] sm:w-[280px]
+          flex items-center justify-center gap-5
+          py-3 px-6
+          bg-neutral-800/90 backdrop-blur-sm
+          text-white
+          border border-neutral-700
+          rounded-xl
+          shadow-md
+          hover:bg-neutral-700
+          transition
+          text-sm font-medium
+        "
+      >
+        <img src="/apple-icon.svg" alt="Apple" className="w-5 h-5" />
+        Continue with Apple
+      </button>
+
+      {/* Email */}
+      <button
+        type="button"
+        onClick={() => router.push("/landing")}
+        className="
+          w-[260px] sm:w-[280px]
+          flex items-center justify-center gap-5
+          py-3 px-6
+          bg-white/5 backdrop-blur-sm
+          text-white/80
+          border border-white/20
+          rounded-xl
+          shadow-md
+          hover:bg-white/15
+          transition
+          text-sm font-medium
+        "
+      >
+        <img src="/mail.svg" alt="Email" className="w-5 h-5" />
+        Continue with Email
+      </button>
+    </motion.div>
+  )}
+</AnimatePresence>
+</div>
+
+{/* Футер */}
+      <footer className="absolute md:bottom-2 bottom-[max(env(safe-area-inset-bottom),0.5rem)] left-1/2 -translate-x-1/2 text-sm text-neutral-500">
+        © 2026 NaviMind Inc.
+      </footer>
       </div>
     </motion.div>
   );

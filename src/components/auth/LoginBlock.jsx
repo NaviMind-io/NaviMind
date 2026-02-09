@@ -129,30 +129,15 @@ export default function LoginBlock({
       </div>
 
       {/* Microcopy */}
-      <p className="hidden md:block text-sm text-white/70 text-center">
-        NaviMind saves hours of manual search. Ask once, get it right.
-      </p>
-      <p className="md:hidden block text-[13px] text-white/60 text-center">
-        NaviMind - Ask once, get it right.
-      </p>
-
-      {/* OR line */}
-      <div className="flex items-center my-6">
-        <div className="flex-grow h-px bg-gray-700" />
-        <span className="px-2 text-gray-400 text-xs">OR</span>
-        <div className="flex-grow h-px bg-gray-700" />
-      </div>
-
-      {/* Google login */}
-      <button
-        type="button"
-        onClick={onGoogle}
-        disabled={isSubmitting}
-        className="w-full flex items-center justify-center gap-3 py-2 px-4 bg-white text-gray-800 border border-gray-300 rounded-md shadow hover:bg-gray-100 transition disabled:opacity-60 disabled:cursor-not-allowed text-sm font-medium"
-      >
-        <img src="/google-icon.svg" alt="Google" className="w-5 h-5" />
-        Continue with Google
-      </button>
+<div className="mt-14">
+  <p className="hidden md:block text-sm text-white/70 text-center">
+    NaviMind saves hours of manual search. Ask once, get it right.
+  </p>
+  <p className="md:hidden block text-[13px] text-white/60 text-center leading-relaxed">
+    NaviMind saves hours of manual search.<br />
+    Ask once, get it right.
+  </p>
+</div>
     </div>
   );
 }

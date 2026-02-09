@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import LoginBlock from "@/components/auth/LoginBlock";
 import ForgotPasswordBlock from "@/components/auth/ForgotPasswordBlock";
 import RegistrationBlock from "@/components/auth/RegistrationBlock";
-import { loginWithGoogle, registerWithEmail, loginWithEmail } from "@/firebase/authClient";
+import { registerWithEmail, loginWithEmail } from "@/firebase/authClient";
 import { AnimatePresence } from "framer-motion";
 import ParticleBackground from "@/components/landing/ParticleBackground";
 import AuthCard from "@/components/auth/AuthCard";
@@ -23,25 +23,6 @@ export default function LandingPage() {
  const router = useRouter();
  const [showPassword, setShowPassword] = useState(false);
 
-  // --- Google Sign-In ---
-async function handleGoogle() {
-  setAuthError("");
-  try {
-    setIsSubmitting(true);
-    await loginWithGoogle();   
-    router.replace("/app");      
-  } catch (err) {
-    if (err?.code === "auth/popup-closed-by-user") {
-      setAuthError("Google popup was closed.");
-    } else if (err?.code === "auth/cancelled-popup-request") {
-      setAuthError("Popup request cancelled. Try again.");
-    } else {
-      setAuthError(err?.message || "Google sign-in error.");
-    }
-  } finally {
-    setIsSubmitting(false);
-  }
-}
 
 // --- Email/Password Sign-Up ---
 async function handleRegister(userData = {}) {
@@ -105,10 +86,12 @@ async function handleRegister(userData = {}) {
       return;
     }
 
-    if (methods.includes("google.com") && !methods.includes("password")) {
-      setAuthError('This email is registered with Google. Use “Continue with Google”.');
-      return;
-    }
+    if (!methods.includes("password")) {
+  setAuthError(
+    "An account with this email already exists. Please use password recovery to set a password and access your account."
+  );
+  return;
+}
 
    // ✅ теперь логинимся с проверкой верификации
     await loginWithEmail(emailInput, password);
@@ -223,7 +206,6 @@ forgot: {
                 authError={authError}
                 onClearAuthError={() => setAuthError("")}
                 isSubmitting={isSubmitting}
-                onGoogle={handleGoogle} 
               />
             </motion.div>
              </AuthCard>
@@ -262,11 +244,6 @@ forgot: {
           {/* Индикатор стадий: мобильный лейбл + десктопные точки */}
           </AnimatePresence>
       </motion.div>
-
-      {/* Футер */}
-      <footer className="absolute md:bottom-2 bottom-[max(env(safe-area-inset-bottom),0.5rem)] left-1/2 -translate-x-1/2 text-sm text-neutral-500">
-        © 2025 NaviMind Inc.
-      </footer>
     </main>
   </>
   );

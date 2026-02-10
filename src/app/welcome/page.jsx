@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { landingQuickChecks } from "@/data/landingQuickChecks";
-// import ParticleBackground from "@/components/landing/ParticleBackground";
+import ParticleBackground from "@/components/landing/ParticleBackground";
 import { loginWithGoogle } from "@/firebase/authClient";
 // import { loginWithApple } from "@/firebase/authClient";
 
@@ -103,7 +103,11 @@ export default function WelcomePage() {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
     >
-      
+      {/* Фон */}
+      <div className="absolute inset-0 gradient-bg">
+        <ParticleBackground />
+      </div>
+
       {/* Контент */}
       <div className="
   relative z-10

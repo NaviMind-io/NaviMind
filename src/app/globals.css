@@ -172,8 +172,3 @@ body {
     transform: rotate(-15deg);
   }
 }
-
-.compass-sway {
-  animation: compassSway 2.2s ease-in-out infinite;
-  transform-origin: center center;
-}

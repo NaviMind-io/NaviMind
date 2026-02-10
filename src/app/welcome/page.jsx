@@ -47,7 +47,6 @@ export default function WelcomePage() {
 );
   const [typed, setTyped] = useState("");
   const [isTyping, setIsTyping] = useState(true);
-  const [showOtherOptions, setShowOtherOptions] = useState(false);
 
   const TYPING_DURATION_MS = 4000;
   const READING_PAUSE_MS = 3000;
@@ -224,10 +223,8 @@ export default function WelcomePage() {
   >
     <img src="/mail.svg" alt="Email" className="w-5 h-5" />
   </button>
-
 </div>
 </div>
-
 
 {/* Футер */}
       <footer className="absolute md:bottom-2 bottom-[max(env(safe-area-inset-bottom),0.5rem)] left-1/2 -translate-x-1/2 text-sm text-neutral-500">

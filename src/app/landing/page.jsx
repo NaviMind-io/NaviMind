@@ -136,14 +136,14 @@ forgot: {
 <motion.div
   initial={{ opacity: 0, x: -30 }}
   animate={{ opacity: 1, x: 0 }}
-  transition={{ duration: 1.6, ease: "easeOut" }}
+  transition={{ duration: 1.0, ease: "easeOut" }}
   className="w-full md:w-1/2 flex flex-col items-center md:justify-center px-6 md:px-12 pt-6 md:py-10 text-center"
 >
   <div className="max-w-2xl">
     <motion.img
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.6, delay: 1.0 }}
+      transition={{ duration: 0.6, delay: 1 }}
       src="/logo-navi.png"
       alt="NaviMind AI"
       className="w-[200px] md:w-[280px] h-auto object-contain mb-2 mx-auto"
@@ -152,7 +152,7 @@ forgot: {
     <motion.h2
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 1.5 }}
+      transition={{ duration: 0.6, delay: 1 }}
       className="text-[14px] font-medium text-white/70 tracking-wide mb-2 md:mb-6"
     >
       Your AI Copilot for Maritime Operations.

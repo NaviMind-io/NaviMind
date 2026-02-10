@@ -6,6 +6,7 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   signInWithPopup,
+  OAuthProvider,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { sendPasswordResetEmail } from "firebase/auth";
@@ -84,6 +85,19 @@ export async function registerWithEmail({ email, password, firstName, lastName, 
 // Вход через Google
 export async function loginWithGoogle() {
   const cred = await signInWithPopup(auth, googleProvider);
+  await ensureUserDoc(cred.user);
+  return cred.user;
+}
+
+// Вход через Apple
+export async function loginWithApple() {
+  const provider = new OAuthProvider("apple.com");
+
+  // Apple отдаёт email и имя ТОЛЬКО при первом входе
+  provider.addScope("email");
+  provider.addScope("name");
+
+  const cred = await signInWithPopup(auth, provider);
   await ensureUserDoc(cred.user);
   return cred.user;
 }

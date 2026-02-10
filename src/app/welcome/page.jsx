@@ -221,7 +221,7 @@ export default function WelcomePage() {
       transition
     "
   >
-    <img src="/mail.svg" alt="Email" className="w-5 h-5" />
+    <img src="/Mail-icon.svg" alt="Email" className="w-5 h-5" />
   </button>
 </div>
 </div>

@@ -7,12 +7,38 @@ import {
   updateTopicChatMessage,
   updateChatSummary,
 } from "@/firebase/chatStore";
-
 import { fetchChatSummary } from "@/ai/chatSummary";
 import { db } from "@/firebase/config";
 import { doc, getDoc } from "firebase/firestore";
-
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { storage } from "@/firebase/config";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
+async function uploadAttachments({ uid, chatId, topicId, files }) {
+  const uploaded = [];
+
+  for (const file of files) {
+    const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const uniqueFileName = `${uniqueSuffix}-${file.name}`;
+    const path = topicId
+      ? `users/${uid}/topics/${topicId}/chats/${chatId}/${uniqueFileName}`
+      : `users/${uid}/chats/${chatId}/${uniqueFileName}`;
+
+    const storageRef = ref(storage, path);
+
+    await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(storageRef);
+
+    uploaded.push({
+      name: file.name,
+      type: file.type,
+      url: downloadURL,
+      path,
+    });
+  }
+
+  return uploaded;
+}
 
 async function fetchChatSummaryFromStore({ uid, chatId, topicId }) {
   const ref = topicId
@@ -44,6 +70,7 @@ const sendLocks = new Set();
 
 export async function sendChatMessage({
   message,
+  attachments = [],
   currentUser,
   activeChatId,
   topicIdFromURL,
@@ -129,11 +156,29 @@ sendLocks.add(sendKey);
   }
 
   // ───────── SAVE USER MESSAGE ─────────
-  if (inTopic) {
-    await addMessageToTopicChat(topicId, chatId, message);
-  } else {
-    await addMessageToGlobalChat(chatId, message);
-  }
+
+let uploadedAttachments = [];
+
+if (attachments.length > 0) {
+  uploadedAttachments = await uploadAttachments({
+    uid: currentUser.uid,
+    chatId,
+    topicId: inTopic ? topicId : null,
+    files: attachments,
+  });
+}
+
+const userMessagePayload = {
+  role: "user",
+  content: message,
+  attachments: uploadedAttachments,
+};
+
+if (inTopic) {
+  await addMessageToTopicChat(topicId, chatId, userMessagePayload);
+} else {
+  await addMessageToGlobalChat(chatId, userMessagePayload);
+}
 
   // ───────── AI PLACEHOLDER ─────────
   let aiMessageId;
@@ -173,10 +218,11 @@ const summary = await fetchChatSummaryFromStore({
       Accept: "text/event-stream",
     },
     body: JSON.stringify({
-      question: message,
-      chatHistory,
-      summary,
-    }),
+  question: message,
+  chatHistory,
+  summary,
+  imageUrls: uploadedAttachments.map(a => a.url),
+}),
   });
 
   const contentType = res.headers.get("content-type") || "";

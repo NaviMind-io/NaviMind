@@ -39,20 +39,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// ===== SYSTEM PROMPT ASSEMBLY =====
-
-const SYSTEM_PROMPT = [
-  systemInstruction,
-  assistantRoleAndValue,
-  responseStyle,
-  safetyRules,
-  confidenceCalibration,
-  clarificationStrategy,
-  documentAnalysisGuidance,
-  imageAnalysisGuide,
-  regulatoryEvidenceGuidance,
-].join("\n\n---\n\n");
-
 // ===== SSE helper =====
 
 function sse(event, data) {
@@ -70,7 +56,30 @@ export async function POST(req) {
       question,
       chatHistory = [], 
       summary = "",
+      imageUrls = [],
     } = body;
+
+    const basePrompt = [
+  systemInstruction,
+  assistantRoleAndValue,
+  responseStyle,
+  safetyRules,
+  confidenceCalibration,
+  clarificationStrategy,
+].join("\n\n---\n\n");
+
+const contextualBlocks = [
+  imageUrls.length > 0 ? imageAnalysisGuide : null,
+  isOperationalScenario(question) ? operationalReasoningPolicy : null,
+  imageUrls.length > 0 ? documentAnalysisGuidance : null,
+].filter(Boolean);
+
+const assembledSystemPrompt = [
+  basePrompt,
+  ...contextualBlocks,
+].join("\n\n---\n\n");
+
+    const isImageMode = Array.isArray(imageUrls) && imageUrls.length > 0;
 
     if (!process.env.OPENAI_API_KEY) {
       return new Response(sse("error", "Missing OPENAI_API_KEY"), {
@@ -107,18 +116,9 @@ ${summary}
          const messages = [
   {
     role: "system",
-    content: SYSTEM_PROMPT,
+    content: assembledSystemPrompt,
   },
-
-  ...(isOperationalScenario(question)
-    ? [
-        {
-          role: "system",
-          content: operationalReasoningPolicy,
-        },
-      ]
-    : []),
-
+  
   ...(summaryBlock ? [summaryBlock] : []),
 
   ...chatHistory.map((m) => ({
@@ -126,11 +126,20 @@ ${summary}
     content: String(m.content),
   })),
 
-  { role: "user", content: String(question) },
+  {
+  role: "user",
+  content: [
+    { type: "text", text: String(question) },
+    ...imageUrls.map((url) => ({
+      type: "image_url",
+      image_url: { url },
+    })),
+  ],
+},
 ];
 
           const completion = await openai.chat.completions.create({
-            model: "gpt-4.1-mini",
+            model: "gpt-4o",
             stream: true,
             messages,
           });

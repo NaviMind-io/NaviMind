@@ -76,7 +76,7 @@ export default function FilePreview({ files, onRemove }) {
                 transition
               "
               tabIndex={0}
-              aria-label="Удалить файл"
+              aria-label="Delete file"
             >
               ✕
             </button>

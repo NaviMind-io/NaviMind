@@ -12,6 +12,10 @@ import FilePreview from "./FilePreview";
 import { sendChatMessage } from "./sendChatMessage";
 
 const FILES_LIMIT = 5;
+const MAX_IMAGE_SIZE = 15 * 1024 * 1024; // 15MB
+const MAX_DOCUMENT_SIZE = 30 * 1024 * 1024; // 30MB
+const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // 100MB
+
 
 export default function InputBar() {
   const { isSidebarOpen, inputText, setInputText } = useContext(UIContext);
@@ -92,8 +96,13 @@ const topicIdFromURL =
   setInputValue("");
   setIsActive(false);
 
+  const preparedAttachments = uploadedFiles;
+
+  setUploadedFiles([]);
+
   await sendChatMessage({
     message,
+    attachments: preparedAttachments,
     currentUser,
     activeChatId,
     topicIdFromURL,
@@ -104,31 +113,63 @@ const topicIdFromURL =
   });
 };
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+const handleKeyDown = (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    handleSend();
+  }
+};
 
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
+const handleFileChange = (e) => {
+  const files = Array.from(e.target.files);
 
-    if (uploadedFiles.length + files.length > FILES_LIMIT) {
-      setFileAlert(`You can upload up to ${FILES_LIMIT} files`);
+  // Проверка количества
+  if (uploadedFiles.length + files.length > FILES_LIMIT) {
+    setFileAlert(`You can upload up to ${FILES_LIMIT} files`);
+    setTimeout(() => setFileAlert(""), 7000);
+    return;
+  }
+
+  let totalSize = uploadedFiles.reduce((acc, file) => acc + file.size, 0);
+  const validFiles = [];
+
+  for (const file of files) {
+    const isImage = file.type.startsWith("image/");
+
+    // Проверка размера одного файла
+    if (isImage && file.size > MAX_IMAGE_SIZE) {
+      setFileAlert(`Image "${file.name}" exceeds 15MB limit`);
       setTimeout(() => setFileAlert(""), 7000);
-      return;
+      continue;
     }
 
-    setUploadedFiles((prev) => [...prev, ...files]);
-    e.target.value = ""; 
-  };
+    if (!isImage && file.size > MAX_DOCUMENT_SIZE) {
+      setFileAlert(`File "${file.name}" exceeds 30MB limit`);
+      setTimeout(() => setFileAlert(""), 7000);
+      continue;
+    }
 
-  const removeFile = (filename) => {
-    setUploadedFiles((prev) => prev.filter((f) => f.name !== filename));
+    // Проверка общего размера
+    if (totalSize + file.size > MAX_TOTAL_SIZE) {
+      setFileAlert(`Total upload limit is 100MB`);
+      setTimeout(() => setFileAlert(""), 7000);
+      break;
+    }
 
-    if (uploadedFiles.length <= FILES_LIMIT) setFileAlert("");
-  };
+    totalSize += file.size;
+    validFiles.push(file);
+  }
+
+  if (validFiles.length > 0) {
+    setUploadedFiles((prev) => [...prev, ...validFiles]);
+  }
+
+  e.target.value = "";
+};
+
+const removeFile = (filename) => {
+  setUploadedFiles((prev) => prev.filter((f) => f.name !== filename));
+};
 
   /* ───────── RENDER ───────── */
   return (
@@ -150,7 +191,7 @@ const topicIdFromURL =
   ${isActive ? "border-blue-500 animate-glow" : ""}`}
 >
             {/* INPUT ROW — single line */}
-<div className="flex items-center w-full gap-1 px-1">
+<div className="flex items-end w-full gap-1 px-1">
   {/* 📎 Attach File */}
   <Tooltip content="Add photos & files" position="top">
     <label className="relative cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded min-w-[40px] min-h-[40px] flex items-center justify-center">
@@ -177,17 +218,8 @@ const topicIdFromURL =
       setInputValue(e.target.value);
       if (e.target.value.trim()) setIsActive(true);
     }}
-    onFocus={(e) => {
-      setIsActive(true);
-      setTimeout(
-        () =>
-          e.target.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-          }),
-        100
-      );
-    }}
+    onFocus={() => setIsActive(true)}
+
     onBlur={() => {
       if (!inputValue.trim()) setIsActive(false);
     }}

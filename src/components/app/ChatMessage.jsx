@@ -3,8 +3,8 @@
 import { useContext, useState, useEffect, useRef } from "react";
 import { UIContext } from "@/context/UIContext";
 import { Check, Copy } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import MessageAttachments from "./MessageAttachments";
+import MarkdownRenderer from "@/components/app/chat/MarkdownRenderer";
 
 // Регулируешь ширину сообщений здесь:
 const USER_MESSAGE_WIDTH = "max-w-[70%]";
@@ -36,32 +36,41 @@ function CopyButton({ copied, onCopy, className = "" }) {
   );
 }
 
-
 // Компонент сообщения пользователя — кнопка копии справа
-function UserMessage({ content, copied, onCopy }) {
+function UserMessage({ content, attachments = [], copied, onCopy }) {
   return (
     <div className="w-full flex justify-end mt-6">
+  <div className={`flex flex-col items-end gap-2 ${USER_MESSAGE_WIDTH}`}>
+
+      {/* Attachments отдельным блоком */}
+      {attachments?.length > 0 && (
+  <MessageAttachments attachments={attachments} />
+)}
+
+      {/* Bubble только с текстом */}
       <div
         className={`
           group
           p-3 rounded-xl
           text-[17px] sm:text-base font-normal
           leading-relaxed whitespace-pre-wrap shadow-md break-words
-          ${USER_MESSAGE_WIDTH}
+          ${USER_MESSAGE_WIDTH} min-w-fit
           bg-gray-700/40 backdrop-blur-md border border-white/5 text-white shadow-lg
-
         `}
       >
         {content}
+
         <CopyButton
-  copied={copied}
-  onCopy={onCopy}
-  className="justify-end ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-/>
+          copied={copied}
+          onCopy={onCopy}
+          className="justify-end ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+        />
       </div>
     </div>
+      </div>
   );
 }
+
 
 function splitHighlight(text) {
   if (!text) return { main: text, highlight: null };
@@ -125,49 +134,7 @@ function AssistantMessage({ content, displayText, copied, onCopy, showCopy }) {
         {/* Основной текст */}
         <div className="max-w-[72ch]"></div>
         <div className="text-[17px] sm:text-base font-normal leading-relaxed sm:leading-relaxed break-words text-gray-200">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              p: ({ children }) => (
-                <p className="mb-5 last:mb-0 leading-relaxed">
-                 {children}
-                </p>
-                ),
-
-              h2: ({ children }) => (
-  <h2 className="mt-8 mb-3 text-[18px] sm:text-lg font-semibold text-white tracking-tight">
-    {children}
-  </h2>
-),
-h3: ({ children }) => (
-  <h3 className="mt-6 mb-2 text-[16px] sm:text-base font-semibold text-white/90 tracking-tight">
-    {children}
-  </h3>
-),
-
-              ul: ({ children }) => (
-  <ul className="mb-5 pl-6 list-disc space-y-2 sm:space-y-2">
-    {children}
-  </ul>
-),
-ol: ({ children }) => (
-  <ol className="mb-5 pl-6 list-decimal space-y-2">
-    {children}
-  </ol>
-),
-li: ({ children }) => (
-  <li className="leading-relaxed">
-    {children}
-  </li>
-),
-
-              hr: () => <div className="my-8 sm:my-10 h-px w-full bg-white/10" />,
-
-              strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
-            }}
-          >
-            {main}
-          </ReactMarkdown>
+          <MarkdownRenderer content={main} />
         </div>
 
         {/* Highlight bubble (premium) */}
@@ -182,16 +149,14 @@ li: ({ children }) => (
           </div>
         )}
 
-        {showCopy && (
-  <CopyButton copied={copied} onCopy={onCopy} className="justify-start" />
-)}
+      <CopyButton copied={copied} onCopy={onCopy} className="justify-start" />
       </div>
     </div>
   );
   }
   
 export default function ChatMessage({ message }) {
-  const { role, content } = message;
+  const { role, content, attachments = [] } = message;
   const { language } = useContext(UIContext);
 
   const isUser = role === "user";
@@ -310,7 +275,11 @@ useEffect(() => {
 
   if (isUser) {
     return (
-      <UserMessage content={content} copied={copied} onCopy={handleCopy} />
+      <UserMessage 
+      content={content} 
+      attachments={attachments} 
+      copied={copied} 
+      onCopy={handleCopy} />
     );
   }
   if (isAssistant) {

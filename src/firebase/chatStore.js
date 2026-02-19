@@ -37,7 +37,7 @@ export async function createUserChat() {
   };
 }
 
-export async function addMessageToChat(chatId, messageContent, role = "user") {
+export async function addMessageToChat(chatId, messageData, role = "user") {
   const user = auth.currentUser;
   if (!user) throw new Error("User not authenticated");
 
@@ -52,11 +52,17 @@ export async function addMessageToChat(chatId, messageContent, role = "user") {
   { merge: true }
 );
 
-  const message = {
-  role,
-  content: messageContent,
-  timestamp: serverTimestamp(),
-};
+  const message =
+  typeof messageData === "object"
+    ? {
+        ...messageData,
+        timestamp: serverTimestamp(),
+      }
+    : {
+        role,
+        content: messageData,
+        timestamp: serverTimestamp(),
+      };
 
   const messageRef = await addDoc(messagesRef, message);
 
@@ -64,7 +70,12 @@ export async function addMessageToChat(chatId, messageContent, role = "user") {
   const chatSnap = await getDoc(chatRef);
 
 if (!chatSnap.data()?.title) {
-  const titleWords = messageContent.trim().split(/\s+/).slice(0, 8).join(" ");
+  const textForTitle =
+    typeof messageData === "object"
+      ? messageData.content
+      : messageData;
+
+  const titleWords = textForTitle.trim().split(/\s+/).slice(0, 8).join(" ");
   const title =
     titleWords.charAt(0).toUpperCase() + titleWords.slice(1);
 
@@ -221,7 +232,12 @@ export async function createChatForTopic({ uid, topicId, messageText }) {
   };
 }
 
-export async function addMessageToTopicChat(topicId, chatId, messageContent, role = "user") {
+export async function addMessageToTopicChat(
+  topicId,
+  chatId,
+  messageData,
+  role = "user"
+) {
   const user = auth.currentUser;
   const uid = user?.uid;
   if (!uid) throw new Error("User not authenticated");
@@ -239,34 +255,42 @@ export async function addMessageToTopicChat(topicId, chatId, messageContent, rol
     "messages"
   );
 
-  // ✅ гарантируем, что документ чата существует (создастся при отсутствии)
   await setDoc(
     chatRef,
     { ownerId: uid, topicId, createdAt: serverTimestamp(), title: "New Chat" },
     { merge: true }
   );
 
-  const message = {
-  role,
-  content: messageContent,
-  timestamp: serverTimestamp(),
-};
+  const message =
+    typeof messageData === "object"
+      ? {
+          ...messageData,
+          timestamp: serverTimestamp(),
+        }
+      : {
+          role,
+          content: messageData,
+          timestamp: serverTimestamp(),
+        };
 
   const messageRef = await addDoc(messagesRef, message);
 
-  // Если это первое сообщение — формируем заголовок из него
   const chatSnap = await getDoc(chatRef);
 
-if (!chatSnap.data()?.title || chatSnap.data()?.title === "New Chat") {
-  const titleWords = messageContent.trim().split(/\s+/).slice(0, 8).join(" ");
-  const title =
-    titleWords.charAt(0).toUpperCase() + titleWords.slice(1);
+  if (!chatSnap.data()?.title || chatSnap.data()?.title === "New Chat") {
+    const textForTitle =
+      typeof messageData === "object"
+        ? messageData.content
+        : messageData;
 
-  await updateDoc(chatRef, { title });
-}
+    const titleWords = textForTitle.trim().split(/\s+/).slice(0, 8).join(" ");
+    const title =
+      titleWords.charAt(0).toUpperCase() + titleWords.slice(1);
+
+    await updateDoc(chatRef, { title });
+  }
 
   return { messageId: messageRef.id };
-
 }
 
 // ─────────── UPDATE MESSAGE (GLOBAL) ───────────

@@ -2,7 +2,7 @@
 
 import { useContext, useState, useEffect, useRef } from "react";
 import { UIContext } from "@/context/UIContext";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Link } from "lucide-react";
 import MessageAttachments from "./MessageAttachments";
 import MarkdownRenderer from "@/components/app/chat/MarkdownRenderer";
 
@@ -101,7 +101,7 @@ function splitHighlight(text) {
 }
 
 // Компонент сообщения AI — кнопка копии слева
-function AssistantMessage({ content, displayText, copied, onCopy, showCopy }) {
+function AssistantMessage({ content, displayText, copied, onCopy, showCopy, sources = [] }) {
   const text = String(displayText ?? content ?? "");
 
   // индикатор ожидания (placeholder)
@@ -149,6 +149,45 @@ function AssistantMessage({ content, displayText, copied, onCopy, showCopy }) {
           </div>
         )}
 
+        {sources.length > 0 && (
+  <div className="flex flex-wrap gap-2 mt-4">
+    {sources.map((s, i) => {
+      let domain = "";
+      try {
+        domain = new URL(s.url).hostname.replace("www.", "");
+      } catch {
+        domain = "source";
+      }
+
+      return (
+        <a
+          key={i}
+          href={s.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="
+            inline-flex items-center gap-1.5
+            px-3 py-1.5
+            rounded-full
+            text-xs
+            bg-white/[0.04]
+            border border-white/[0.08]
+            text-white/70
+            hover:bg-white/[0.08]
+            hover:text-white
+            transition-all duration-200
+          "
+        >
+          <Link size={9} className="opacity-60 shrink-0" />
+          <span className="truncate max-w-[120px]">
+            {domain}
+          </span>
+        </a>
+      );
+    })}
+  </div>
+)}
+
       <CopyButton copied={copied} onCopy={onCopy} className="justify-start" />
       </div>
     </div>
@@ -156,7 +195,7 @@ function AssistantMessage({ content, displayText, copied, onCopy, showCopy }) {
   }
   
 export default function ChatMessage({ message }) {
-  const { role, content, attachments = [] } = message;
+  const { role, content, attachments = [], sources = [] } = message;
   const { language } = useContext(UIContext);
 
   const isUser = role === "user";
@@ -290,6 +329,7 @@ useEffect(() => {
     copied={copied}
     onCopy={handleCopy}
     showCopy={hasTypedOnceRef.current}
+    sources={sources}
   />
 );
   }

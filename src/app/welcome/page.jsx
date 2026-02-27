@@ -13,6 +13,7 @@ export default function WelcomePage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [showUI, setShowUI] = useState(false);
 
     async function handleGoogle() {
     setAuthError("");
@@ -75,6 +76,9 @@ export default function WelcomePage() {
         typingTimerRef.current = setTimeout(type, perChar);
       } else {
         setIsTyping(false);
+        if (!showUI) {
+  setShowUI(true);
+}
         holdTimerRef.current = setTimeout(() => {
          setQIndex((prev) => {
   let next = prev;
@@ -118,7 +122,15 @@ export default function WelcomePage() {
 ">
 
   {/* Верх: логотип + слоган (без motion) */}
-<div className="flex flex-col items-center mb-1 sm:mb-6">
+<motion.div
+  className="flex flex-col items-center mb-1 sm:mb-6"
+  initial={{ opacity: 0, y: -10 }}
+ animate={{
+  opacity: showUI ? 1 : 0,
+  y: showUI ? 0 : -10,
+}}
+  transition={{ duration: 0.6, ease: "easeOut" }}
+>
   <div className="max-w-2xl">
     <img
       src="/logo-navi.png"
@@ -130,7 +142,7 @@ export default function WelcomePage() {
       Your AI Copilot for Maritime Operations.
     </h2>
   </div>
-</div>
+</motion.div>
 
   {/* Низ: typewriter */}
   <div className="min-h-[72px] sm:min-h-[96px] flex items-center justify-center w-full welcome-typewriter">
@@ -156,7 +168,15 @@ export default function WelcomePage() {
   </div>
   
   {/* Auth buttons */}
-<div className="mt-6 flex flex-col items-center gap-4">
+<motion.div
+  className="mt-6 flex flex-col items-center gap-4"
+  initial={{ opacity: 0, y: 10 }}
+  animate={{
+  opacity: showUI ? 1 : 0,
+  y: showUI ? 0 : -10,
+}}
+  transition={{ duration: 0.6, ease: "easeOut", delay: 0.15 }}
+>
 
   {/* Google — primary, в фирменном стиле */}
 <button
@@ -164,8 +184,8 @@ export default function WelcomePage() {
   onClick={handleGoogle}
   disabled={isSubmitting}
   className="
-    w-[260px] sm:w-[280px]
-    h-12
+    w-[320px] sm:w-[360px] lg:w-[420px]
+    mx-auto h-12
     flex items-center justify-center gap-4
     py-3 
     bg-white/5 backdrop-blur-sm
@@ -184,7 +204,7 @@ export default function WelcomePage() {
 </button>
 
  {/* Secondary options */}
-<div className="w-[260px] sm:w-[280px] flex gap-3 mt-0.5">
+<div className="w-[320px] sm:w-[360px] lg:w-[420px] mx-auto flex gap-3 mt-0.5">
 
   {/* Apple */}
   <button
@@ -224,13 +244,20 @@ export default function WelcomePage() {
     <img src="/Mail-icon.svg" alt="Email" className="w-5 h-5" />
   </button>
 </div>
-</div>
+</motion.div>
 
 {/* Футер */}
       <footer className="absolute md:bottom-2 bottom-[max(env(safe-area-inset-bottom),0.5rem)] left-1/2 -translate-x-1/2 text-sm text-neutral-500">
         © 2026 NaviMind Inc.
       </footer>
       </div>
+
+     {isSubmitting && (
+  <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+    <div className="w-10 h-10 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+  </div>
+)}
+
     </motion.div>
   );
 }

@@ -11,6 +11,9 @@ export default function ParticleBackground() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    let meteorTimeout;
+    let animationId;
+
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
@@ -54,11 +57,11 @@ export default function ParticleBackground() {
         spawnMeteor(meteorSequence[meteorIndex]);
         meteorIndex++;
         const delay = 15000 + Math.random() * 5000;
-        setTimeout(runMeteorCycle, delay);
+        meteorTimeout = setTimeout(runMeteorCycle, delay);
       } else {
         meteorIndex = 0;
         const delay = 20000 + Math.random() * 10000;
-        setTimeout(runMeteorCycle, delay);
+        meteorTimeout = setTimeout(runMeteorCycle, delay);
       }
     }
     runMeteorCycle();
@@ -121,7 +124,7 @@ meteors.forEach((m, i) => {
   }
 });
 
-      requestAnimationFrame(animate);
+      animationId = requestAnimationFrame(animate);
     }
 
     animate();
@@ -132,8 +135,13 @@ meteors.forEach((m, i) => {
     };
     window.addEventListener("resize", handleResize);
 
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+    return () => {
+  window.removeEventListener("resize", handleResize);
+  if (meteorTimeout) clearTimeout(meteorTimeout);
+  if (animationId) cancelAnimationFrame(animationId);
+};
+  }, 
+  []);
 
   return (
   <canvas

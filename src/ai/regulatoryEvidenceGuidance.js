@@ -1,5 +1,5 @@
 export const regulatoryEvidenceGuidance = `
-# Regulatory Evidence & RAG Citation Guidance (NaviMind AI)
+# Regulatory Evidence & RAG Citation Guidance (NaviMind)
 
 ## Purpose
 

@@ -62,7 +62,7 @@ export default function TopicModal({
           type="submit"
           disabled={!topicName.trim()}
           className={`
-            w-full px-4 py-2 rounded-xl font-semibold text-base
+            w-full px-4 py-2 rounded-xl font-medium text-base
             transition
             ${topicName.trim()
               ? "bg-blue-600 hover:bg-blue-700 text-white shadow"

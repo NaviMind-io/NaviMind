@@ -11,6 +11,7 @@ import MyTopicsSection from "./MyTopicsSection";
 import NewChatButton from "./NewChatButton";
 import ChatListSection from "./ChatListSection";
 import UserProfileButton from "./UserProfileButton"; 
+import VesselProfileModal from "./VesselProfileModal";
 
 
 export default function SidebarContainer({
@@ -22,6 +23,7 @@ export default function SidebarContainer({
   const ui = useContext(UIContext);
   const { customProjects, projectChatSessions } = useContext(ChatContext);
   const [isTopicModalOpen, setIsTopicModalOpen] = useState(false);
+  const [isVesselModalOpen, setIsVesselModalOpen] = useState(false);
   const [topicName, setTopicName] = useState("");
 
 // === Swipe gesture detection (mobile) ===
@@ -121,6 +123,31 @@ useEffect(() => {
           </div>
         )}
       </div>
+
+{/* Vessel Profile Button */}
+ <div className="px-1 py-0">
+  <button
+  onClick={() => setIsVesselModalOpen(true)}
+ className="
+  w-full flex items-center gap-2 px-3.5 py-1 rounded-md
+  border border-transparent
+  bg-transparent
+  hover:border-blue-500
+  focus:outline-none focus:ring-2 focus:ring-blue-500
+  transition-colors duration-200 min-h-[38px] 
+"
+>
+  <img
+    src="/Vessel Profile.svg"
+    alt="Vessel Profile"
+    className="w-5 h-5"
+    draggable="false"
+  />
+  <span className="ml-[5px] text-[15px] font-normal text-gray-900 dark:text-gray-100">
+    Vessel Profile
+  </span>
+</button>
+</div>
 
 {/* Create Topic Button */}
 <div className="px-1 py-0">
@@ -255,6 +282,15 @@ useEffect(() => {
           setTopicName("");
         }}
       />
+      
+      <VesselProfileModal
+  open={isVesselModalOpen}
+  onClose={() => setIsVesselModalOpen(false)}
+  onSave={(data) => {
+    console.log("Vessel profile data:", data);
+    setIsVesselModalOpen(false);
+  }}
+/>
     </>
   );
 }

@@ -10,6 +10,7 @@ import { imageAnalysisGuide } from "@/ai/imageAnalysisGuide";
 import { regulatoryEvidenceGuidance } from "@/ai/regulatoryEvidenceGuidance";
 import { assistantRoleAndValue } from "@/ai/assistantRoleAndValue";
 import { operationalReasoningPolicy } from "@/ai/operationalReasoningPolicy";
+import { webAutonomyPolicy } from "@/ai/webAutonomyPolicy";
 
 function isOperationalScenario(question) {
   if (!question) return false;
@@ -51,7 +52,8 @@ function sse(event, data) {
 export async function POST(req) {
   try {
     const body = await req.json();
-
+    console.log("BODY:", body);
+    
     const {
       question,
       chatHistory = [], 
@@ -66,6 +68,7 @@ export async function POST(req) {
   safetyRules,
   confidenceCalibration,
   clarificationStrategy,
+  webAutonomyPolicy,
 ].join("\n\n---\n\n");
 
 const contextualBlocks = [
@@ -118,7 +121,7 @@ ${summary}
     role: "system",
     content: assembledSystemPrompt,
   },
-  
+
   ...(summaryBlock ? [summaryBlock] : []),
 
   ...chatHistory.map((m) => ({
@@ -126,33 +129,81 @@ ${summary}
     content: String(m.content),
   })),
 
-  {
+ {
   role: "user",
   content: [
-    { type: "text", text: String(question) },
+    { type: "input_text", text: String(question) },
     ...imageUrls.map((url) => ({
-      type: "image_url",
-      image_url: { url },
+      type: "input_image",
+      image_url: url,
     })),
   ],
-},
+}
 ];
 
-          const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            stream: true,
-            messages,
-          });
+          const completion = await openai.responses.create({
+  model: "gpt-4.1",
+  stream: false,
+  tools: [{ type: "web_search_preview" }],
+  input: messages,
+});
 
-          for await (const chunk of completion) {
-            const token = chunk?.choices?.[0]?.delta?.content;
-            if (token) {
-              controller.enqueue(encoder.encode(sse("token", token)));
-            }
-          }
+          const rawWebAnswer = completion.output_text || "";
+          const annotations =
+  completion.output?.[1]?.content?.[0]?.annotations || [];
 
-          controller.enqueue(encoder.encode(sse("status", "done")));
-          controller.close();
+const sources = annotations
+  .filter((a) => a.type === "url_citation")
+  .map((a) => ({
+    title: a.title,
+    url: a.url,
+  }));
+        
+          const rewriteCompletion = await openai.responses.create({
+  model: "gpt-4.1",
+  stream: true,
+  input: [
+    {
+      role: "system",
+      content: assembledSystemPrompt,
+    },
+    {
+      role: "user",
+      content: `
+Rewrite the following information strictly in operational maritime style.
+Do NOT add new facts.
+Preserve accuracy.
+
+${rawWebAnswer}
+`,
+    },
+  ],
+});
+
+for await (const event of rewriteCompletion) {
+  if (event.type === "response.output_text.delta") {
+    const token = event.delta;
+    controller.enqueue(encoder.encode(sse("token", token)));
+  }
+
+  if (event.type === "response.error") {
+    controller.enqueue(
+      encoder.encode(sse("error", event.error?.message || "Unknown error"))
+    );
+  }
+}
+
+if (sources.length > 0) {
+  controller.enqueue(
+    encoder.encode(
+      sse("sources", JSON.stringify(sources))
+    )
+  );
+}
+
+controller.enqueue(encoder.encode(sse("status", "done")));
+controller.close();
+
         } catch (e) {
           controller.enqueue(
             encoder.encode(sse("error", e?.message || String(e)))

@@ -227,13 +227,15 @@ const summary = await fetchChatSummaryFromStore({
 
   const contentType = res.headers.get("content-type") || "";
   let finalText = "";
+  let sources = [];
 
 if (res.body && contentType.includes("text/event-stream")) {
   const reader = res.body.getReader();
   const decoder = new TextDecoder("utf-8");
 
   let buffer = "";
-
+  let streamedSources = [];
+  
   while (true) {
     const { value, done } = await reader.read();
     if (done) break;
@@ -265,6 +267,15 @@ if (res.body && contentType.includes("text/event-stream")) {
         finalText += data.replace(/\\n/g, "\n");
       }
 
+      if (event === "source") {
+  try {
+    const parsed = JSON.parse(data);
+    streamedSources.push(parsed);
+  } catch (e) {
+    console.error("Failed to parse source:", data);
+  }
+}
+
       if (event === "error") {
         throw new Error(data || "SSE error");
       }
@@ -273,7 +284,10 @@ if (res.body && contentType.includes("text/event-stream")) {
 
   // финальный апдейт ОДИН РАЗ
   if (aiMessageId) {
-    const payload = { content: finalText || " " };
+   const payload = {
+  content: finalText || " ",
+  sources: streamedSources,
+};
     if (inTopic) {
       await updateTopicChatMessage(topicId, chatId, aiMessageId, payload);
     } else {
